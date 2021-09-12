@@ -1,113 +1,172 @@
 (ns clojure-learning.parser
   (:require clojure.string)
-  (:use clojure-learning.utils))
+  (:use clojure-learning.utils)
+  (:use clojure-learning.parse-tree))
 
 (def rules-map
   {
-   "for-block"                 '(["for" "symbol" "in" "symbol" "\\{" "statements" "\\}"])
-   "statements"          '(["statement" "statements"]
-                           ["statement"])
-   "statement"           '(["declaration" ";"])
-   "declaration"         '(["type" "symbol" "=" "expression"]
-                           ["let" "type" "symbol" "be" "expression"])
-   "type"                '(["int"] ["double"] ["boolean"] ["symbol"])
-   "expression"          '(["expression-literal" "operator" "expression"]
-                           ["\\(" "expression" "\\)"]
-                           ["expression-literal"])
-   "expression-literal"  '(["symbol"] ["number"])
+   "program"                       '(["blocks"])
+   "blocks"                        '(["block" "blocks"] ["block"])
+   "block"                         '(["function-block"] ["statement"])
+   "block-body"                    '(["\\{" "statements" "\\}"] ["empty-body"])
+   "empty-body"                    '(["\\{" "\\}"])
 
-   "boolean-expression"  '(["is" "boolean-expression" "?"]
-                           ["expression" "boolean-operator" "expression"]
-                           ["symbol"])
+   "function-block"                '(["function-declaration" "block-body"])
+   "function-declaration"          '(["function" "symbol" "\\(" "arguments" "\\)"]
+                                     ["function" "symbol" "\\(" "\\)"])
+   "arguments"                     '(["argument" "," "arguments"] ["argument"])
+   "argument"                      '(["variable-declaration"])
+   "function-call"                 '(["symbol" "\\(" "parameters" "\\)"])
+   "parameters"                    '(["parameter" "," "parameters"] ["parameter"])
+   "parameter"                     '(["expression"])
 
-   "operator"            '(["math-operator"] ["boolean-operator"])
-   "math-operator"       '(["\\+"] ["-"] ["\\*"] ["/"])
-   "comparison-operator" '([">"] ["<"] ["\\!" "="] ["=" "="] [])
-   "boolean-operator"    '(["and"] ["or"] ["not"])
+   "for-block"                     '(["for-header" "for-body"])
+   "for-header"                    '(["for" "symbol" "in" "expression"])
+   "pipeline-block"                '(["pipeline" "symbol" "=" "expression" "block-body"])
 
-   "string"              '(["\"" "string-literals" "\""])
-   "string-literals"     '([".+" "string-literals"] [".+"])
+   "if-else-block"                 '(["if-block" "else-blocks"] ["if-block"])
+   "else-blocks"                   '(["else-if-blocks"] ["else-block"])
+   "if-block"                      '(["if" "boolean-expression" "block-body"])
+   "else-if-blocks"                '(["else-if-block" "else-if-blocks"] ["else-if-block"])
+   "else-if-block"                 '(["else" "if-block"])
+   "else-block"                    '(["else" "block-body"])
 
-   "literal"             '(["number"] ["symbol"])
-   "number"              '(["double-literal"] ["integer-literal"])
-   "double-literal"      '(["\\d*\\.\\d*"])
-   "integer-literal"     '(["\\d*"])
-   "symbol"              '(["[a-zA-z]+"])})
+   "statements"                    '(["statement" "statements"] ["statement"])
+   "statement"                     '(["declaration-assignment" ";"]
+                                     ["function-call" ";"]
+                                     ["for-block"]
+                                     ["pipeline-block"]
+                                     ["if-else-block"]
+                                     ["return" "expression" ";"])
+   "declaration-assignment"        '(["variable-declaration" "=" "expression"]
+                                     ["let" "variable-declaration" "be" "expression"])
+   "variable-declaration"          '(["type" "symbol"])
+   "type"                          '(["int"] ["double"] ["boolean"] ["string"]
+                                     ["lambda"] ["object"] ["symbol"])
+   "expression"                    '(["ternary-expression"] ["math-expression"] ["boolean-expression"] ["string-expression"])
+   "string-expression"             '(["string-value" "add-operator" "string-expression"]
+                                     ["\\(" "string-expression" "\\)"]
+                                     ["string-value"])
+   "string-value"                  '(["string-literal"] ["function-call"] ["symbol"])
+   "math-expression"               '(["expression-literal" "operator" "math-expression"]
+                                     ["\\(" "math-expression" "\\)"]
+                                     ["expression-literal"])
+   "expression-literal"            '(["function-call"] ["symbol"] ["number"])
 
-(defn create-node [name parse-result children]
-  {:rule-name name :parse-result parse-result :children children}
-  )
+   "boolean-expression"            '(["boolean-literal" "boolean-operator" "boolean-expression"]
+                                     ["math-expression" "comparison-operator" "math-expression"]
+                                     ["\\(" "boolean-expression" "\\)"]
+                                     ["not-operator" "boolean-expression"]
+                                     ["question"]
+                                     ["boolean-literal"]
+                                     ["function-call"]
+                                     ["symbol"])
 
-(defn add-children [node children]
-  (create-node
-    (:name node) (:parse-result node) (into (:children node) children))
-  )
+   "ternary-expression"            '(["question" "math-expression" ":" "math-expression"]
+                                     ["question" "boolean-expression" ":" "boolean-expression"]
+                                     ["question" "string-expression" ":" "string-expression"])
+   "question"                      '(["is" "boolean-expression" "\\?"])
 
-;todo: needs to know rules tried so far, otherwise recurs infinitely
-(defn create-parse-result [matched remaining]
-  {:matched matched :remaining remaining}
-  )
+   "operator"                      '(["math-operator"] ["boolean-operator"])
+   "math-operator"                 '(["add-operator"] ["-r"] ["mul-operator"] ["/"])
+   "mul-operator"                  '(["\\*"])
+   "add-operator"                  '(["\\+"])
+   "comparison-operator"           '(["composite-comparison-operator"]
+                                     ["basic-comparison-operator"])
+   "basic-comparison-operator"     '(["higher" "than"]
+                                     ["lower" "than"]
+                                     ["equal" "to"]
+                                     [">"]
+                                     ["<"]
+                                     ["\\!" "="]
+                                     ["=" "="])
+   "composite-comparison-operator" '(["basic-comparison-operator" "boolean-operator" "basic-comparison-operator"])
+   "boolean-operator"              '(["and"] ["or"])
+   "not-operator"                  '(["not"])
 
-(defn merge-parse-result [old new]
-  {:matched   (into (:matched old) (:matched new))
-   :remaining (:remaining new)}
-  )
+   "string-literal"                '(["\"[^\".]*\""])
+   "boolean-literal"               '(["true"] ["false"])
+   "literal"                       '(["number"] ["symbol"])
+   "number"                        '(["double-literal"] ["integer-literal"])
+   "double-literal"                '(["\\d*\\.\\d*"])
+   "integer-literal"               '(["\\d*"])
+   "symbol"                        '(["[a-zA-z]+"])})
 
 (defn match-to-pattern [tokens pattern]
   (let [token (first tokens)]
     (if (matches? token (re-pattern pattern))
-      (create-parse-result [token] (rest tokens))
-      (create-parse-result [] tokens)
+      (create-leaf-node pattern (create-parse-result [token] (vec (rest tokens))))
       )
     )
   )
 
 (declare match-rule)
 
-(defn match-rule-token [previous-state rule-token]
-  (let [tokens (:remaining previous-state)]
-    (if (nil? (get rules-map rule-token))
-      (let [parse-result (match-to-pattern tokens rule-token)]
-        (if (empty? (:matched parse-result))
-          (create-parse-result [] tokens)
-          (merge-parse-result previous-state parse-result)
-          )
-        )
-      (merge-parse-result previous-state (match-rule tokens rule-token))
-      )
+(defn match-rule-token [tokens rule-token]
+  ;(if (and (contains? keywords (first tokens)) (not= rule-token "symbol"))
+  ; (throw (Exception. (str "Expecting symbol but found '" (first tokens) "'")))
+  (if (get rules-map rule-token)
+    (match-rule tokens rule-token)
+    (match-to-pattern tokens rule-token)
     )
+  ;)
   )
 
-(defn match-rule-definition [tokens rule-definition]
-  (let [no-match {:matched [] :remaining tokens}]
-    (if (< (count tokens) (count rule-definition))
-      no-match
-      (let [match-result (reduce #(match-rule-token %1 %2) no-match rule-definition)]
-        (do
-          (println (str "matching definition: " rule-definition))
-          (if (empty? (:matched match-result))
-            no-match
-            match-result))
-        ))
+(defn no-match [tokens] {:matched [] :remaining tokens})
+
+(defn match-rule-definition [tokens rule-definition rule-name]
+  (if (>= (count tokens) (count rule-definition))
+    (reduce #(if-let [result (match-rule-token (:remaining (:parse-result %1)) %2)]
+               (add-child %1 result)
+               (reduced nil))
+            (create-leaf-node rule-name (no-match tokens))
+            rule-definition)
     )
   )
 
 (defn match-rule [tokens rule-name]
-  (let [rule-definitions (get rules-map rule-name)
-        no-match {:matched [] :remaining tokens}]
-    (if (empty? tokens)
-      no-match
-      (if rule-definitions
-        (reduce #(if (empty? (:matched %1))
-                   (match-rule-definition (:remaining %1) %2)
-                   (reduced %1))
-                no-match rule-definitions)
-        (match-to-pattern tokens rule-name)
-        ))
-    ))
+  ;(println (str rule-name ": " (apply str (take 2 tokens))))
+  (if (not-empty tokens)
+    (if-let [rule-definitions (get rules-map rule-name)]
+      (reduce #(if %1
+                 (reduced %1)
+                 (match-rule-definition tokens %2 rule-name))
+              nil rule-definitions)
+      (match-to-pattern tokens rule-name)
+      )
+    )
+  )
 
 (defn parse [file]
-  (-> (slurp file)
-      (clojure.string/replace #"[ \t\n\r]+" " ")
-      )
-  )
+  (as-> file x
+        (slurp x)
+        ;pre-process: escape quotes (so \" inside quotes will not be split on)
+        ;treat strings separately. split by " and don't split by space etc everything inside the string
+        (clojure.string/split x #"\"")
+        (let [mapped (as-> x z
+                           (take-nth 2 z)
+                           (map #(as-> %1 y
+                                       (clojure.string/replace y #"([\(\)\{\}\[\]\+\-\*/=;,><\?\!\"])" " $1 ")
+                                       (clojure.string/replace y #"[ \t\n\r]+" " ")
+                                       (clojure.string/split y #" ")
+                                       (filter (fn [s] (not= s "")) y))
+                                z))]
+          (concat
+            (interleave
+              mapped
+              (map #(str "\"" %1 "\"") (take-nth 2 (rest x))))
+            (last mapped))
+          )
+        (flatten x)
+        (vec x)
+        (match-rule x "program")
+        (if (nil? x) (throw (Exception. "Could not parse")) x)
+        (let [remaining (:remaining (:parse-result x))]
+          (if (not-empty remaining)
+            (throw (Exception.
+                     (str "Error parsing after '"
+                          (first remaining) " " (second remaining) "'")))
+            x
+            ))
+        ))
+
