@@ -1,4 +1,4 @@
-(ns clojure-learning.parse-tree)
+(ns clojure-rdp.parser.parse-tree)
 
 (defn create-parse-result [matched remaining]
   {:matched matched :remaining remaining}

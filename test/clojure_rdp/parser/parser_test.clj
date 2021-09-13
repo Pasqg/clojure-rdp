@@ -1,6 +1,6 @@
-(ns clojure-learning.parser-test
+(ns clojure-rdp.parser.parser-test
   (:require [clojure.test :refer :all])
-  (:use clojure-learning.parser))
+  (:use clojure-rdp.parser.parser))
 
 (is (= (match-to-pattern ["whatever"] "[a-z]+")
        {:rule-name    "[a-z]+"

@@ -1,6 +1,6 @@
-(ns clojure-learning.rules-parser
+(ns clojure-rdp.parser.utils.rules-parser
   (:require clojure.string)
-  (:use clojure-learning.utils))
+  (:use clojure-rdp.utils))
 
 (defn parse-rule [rule-string]
   (let [results (map #(clojure.string/split % #" ")

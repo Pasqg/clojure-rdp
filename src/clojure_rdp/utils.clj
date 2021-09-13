@@ -1,4 +1,4 @@
-(ns clojure-learning.utils)
+(ns clojure-rdp.utils)
 
 (defn matches? [string regex]
   (and (not (nil? string))

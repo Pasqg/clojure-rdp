@@ -1,7 +1,7 @@
-(ns clojure-learning.parser
+(ns clojure-rdp.parser.parser
   (:require clojure.string)
-  (:use clojure-learning.utils)
-  (:use clojure-learning.parse-tree))
+  (:use clojure-rdp.utils)
+  (:use clojure-rdp.parser.parse-tree))
 
 (def rules-map
   {
