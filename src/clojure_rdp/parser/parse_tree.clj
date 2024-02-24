@@ -31,6 +31,9 @@
   (doseq [child (:children node)] (print-node child (inc n)))
   )
 
+(defn print-tree [node]
+  (print-node node 0))
+
 (defn visit-tree [root visit-function]
   (doseq [child (:children root)] (visit-function child))
   )
