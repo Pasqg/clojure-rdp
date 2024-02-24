@@ -138,9 +138,10 @@
     )
   )
 
-(defn parse [file]
+(defn parse [file rule]
   (as-> file x
         (tokenize x)
+        (match-rule x rule)
         (if (nil? x) (throw (Exception. "Could not parse")) x)
         (let [remaining (:remaining (:parse-result x))]
           (if (not-empty remaining)

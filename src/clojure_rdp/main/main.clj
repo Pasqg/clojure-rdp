@@ -3,4 +3,4 @@
   (:use clojure-rdp.parser.parse-tree))
 
 (defn -main []
-  (print-tree (parse "hello-word.txt")))
+  (print-tree (parse "hello-word.txt" "program")))
