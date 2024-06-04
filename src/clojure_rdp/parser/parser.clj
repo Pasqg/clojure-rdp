@@ -15,8 +15,6 @@
 (declare match-rule)
 
 (defn match-rule-token [tokens rule-token rules-map]
-  ;(if (and (contains? keywords (first tokens)) (not= rule-token "symbol"))
-  ; (throw (Exception. (str "Expecting symbol but found '" (first tokens) "'")))
   (if (get rules-map rule-token)
     (match-rule tokens rule-token rules-map)
     (match-to-pattern tokens rule-token)
@@ -37,7 +35,6 @@
   )
 
 (defn match-rule [tokens rule-name rules-map]
-  ;(println (str rule-name ": " (apply str (take 2 tokens))))
   (if (not-empty tokens)
     (if-let [rule-definitions (get rules-map rule-name)]
       (reduce #(if %1

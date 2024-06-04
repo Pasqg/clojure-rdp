@@ -34,10 +34,6 @@
 (defn print-tree [node]
   (print-node node 0))
 
-(defn visit-tree [root visit-function]
-  (doseq [child (:children root)] (visit-function child))
-  )
-
 (defn find-in-tree [root rule-name]
   (let [is-rule #(= (:rule-name %1) rule-name)]
     (reduce #(into %1 (find-in-tree %2 rule-name))
@@ -63,20 +59,6 @@
        (:children node))
   )
 
-(defn find-matched-by-rule2
-  ([root rule-name]
-   (map matched-by-children
-        (find-in-tree root rule-name)))
-  ([root rule-name sub-rule]
-   (as-> nil x
-         (map #(find-in-tree %1 sub-rule)
-              (find-in-tree root rule-name))
-         (flatten x)
-         (map matched-by-children x)
-         ))
-  )
-
-;filter is lazy, so (first (find-rule..)) will only calculate unntil first match!
 (defn find-rule-in-children [root rule-name]
   (filter #(= (:rule-name %1) rule-name) (:children root))
   )
@@ -87,10 +69,9 @@
            (clojure.string/includes? (:rule-name node) "]")
            )))
 
-;come nodes (such as parenthesis in function call, commans in arguments etc can be removed!)
 (defn collapse [node]
   (let [children (:children node)]
-    (if (empty? children)                                   ;or if rule is "argument" or any custom uncollapsible rules?
+    (if (empty? children)
       node
       (if (= (count children) 1)
         (if (is-pattern? (first children))

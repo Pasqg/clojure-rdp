@@ -92,4 +92,4 @@
    "symbol"                        '(["[a-zA-z]+"])})
 
 (defn -main []
-  (print-tree (parse "hello-word.txt" "program" rules-map)))
+  (print-tree (collapse (parse "hello-word.txt" "program" rules-map))))

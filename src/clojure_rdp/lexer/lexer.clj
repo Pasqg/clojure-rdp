@@ -3,8 +3,6 @@
 (defn tokenize [file]
   (as-> file x
         (slurp x)
-        ;pre-process: escape quotes (so \" inside quotes will not be split on)
-        ;treat strings separately. split by " and don't split by space etc everything inside the string
         (clojure.string/split x #"\"")
         (let [mapped (as-> x z
                            (take-nth 2 z)
