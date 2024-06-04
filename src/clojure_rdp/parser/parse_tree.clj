@@ -24,7 +24,7 @@
 (defn print-node [node n]
   (println
     (str (apply str (repeat n "  "))
-         (str "+-" (:rule-name node))
+         (str "+- " (:rule-name node))
          (if (empty? (:children node))
            (str ": " (:matched (:parse-result node))))
          ))
