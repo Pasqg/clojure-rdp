@@ -1,12 +1,8 @@
 # clojure-rdp
 
----
-
 A Clojure library to parse generic (right-recursive) grammars.
 
 ## Usage
-
----
 
 To parse the content of a file, assuming that it can be entirely described
 with one rule:
@@ -26,8 +22,6 @@ This outputs a parse tree that can be printed in different ways :
 ```
 
 ## Rules definition
-
----
 
 Each rule of the grammar has a name and a list of possible definitions.
 Each definition of a rule is in *OR* with the others, and order matters as
@@ -121,8 +115,6 @@ Upon mismatch, the parser will backtrack and try another rule on the same
 set of tokens until either a match is found or all rules have been tried.
 
 ## License
-
----
 
 The code available in this repository is under [Apache 2.0 License](LICENSE)
 
