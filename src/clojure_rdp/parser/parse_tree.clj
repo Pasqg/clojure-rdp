@@ -1,4 +1,5 @@
-(ns clojure-rdp.parser.parse-tree)
+(ns clojure-rdp.parser.parse-tree
+  (:require [clojure.data.json :as json]))
 
 (defn create-parse-result [matched remaining]
   {:matched matched :remaining remaining}
@@ -84,3 +85,9 @@
         ))
     )
   )
+
+(defn compact [node]
+  {:rule-name (:rule-name node) :matched (:matched (:parse-result node)) :children (map compact (:children node))})
+
+(defn to-json [node]
+  (json/write-str (compact (collapse node))))

@@ -19,6 +19,9 @@ This outputs a parse tree that can be printed in different ways :
 
 ;collapsed parse tree (i.e. node with only one children are squashed together)
 (print-tree (collapse tree))
+
+;prints a collapsed and compacted json
+(print (to-json (parse "hello-word.txt" "program" rules-map)))
 ```
 
 ## Rules definition
@@ -28,7 +31,14 @@ Each definition of a rule is in *OR* with the others, and order matters as
 the parser will try each definition in order until one matches (greedily).
 
 The elements of each definition are strings which correspond either to
-another rule, or to a regex that matches a single token.
+another rule, or to a regex that matches a single token. No explicit way to
+identify a terminal token: **all strings that do not match a rule of the
+grammar are considered terminal tokens**.
+
+The parser is quite simple and the burden of transforming the
+right-recursive syntax tree into a left-recursive one (where needed, for
+example standard math expressions), or to avoid ambiguous grammars is left
+upon the user.
 
 ### Examples
 
@@ -73,7 +83,7 @@ another rule, or to a regex that matches a single token.
 6. The definitions below defines an expression grammar of the kind
    "1 + (3.8 * 7 / (2.1 - 8))". In this grammar, right-recursion might
    create an additional burden for operators with "left"-precedence (i.e.
-   subtraction and division). 
+   subtraction and division).
 
 ```
 "expression"   '(["number" "operator" "expression"]
@@ -116,7 +126,8 @@ set of tokens until either a match is found or all rules have been tried.
 
 ## License
 
-The code available in this repository is under [Apache 2.0 License](LICENSE)
+The code available in this repository is
+under [Apache 2.0 License](LICENSE)
 
 
 
