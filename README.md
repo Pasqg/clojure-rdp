@@ -83,7 +83,8 @@ upon the user.
 6. The definitions below defines an expression grammar of the kind
    "1 + (3.8 * 7 / (2.1 - 8))". In this grammar, right-recursion might
    create an additional burden for operators with "left"-precedence (i.e.
-   subtraction and division).
+   subtraction and division). This can be overcome either by transforming
+   the parsed tree, or for example by enforcing using of brackets. 
 
 ```
 "expression"   '(["number" "operator" "expression"]
@@ -123,6 +124,14 @@ parse tree:
 
 Upon mismatch, the parser will backtrack and try another rule on the same
 set of tokens until either a match is found or all rules have been tried.
+
+## Error handling
+
+Error handling is very basic at the moment: a generic "Could not parse" is
+thrown, or if not all tokens are parsed, a generic "Error passing
+after <remaining tokens>" is thrown. Future plans involve the ability to
+detect and suggest missing tokens of one or more rules, providing more
+detailed and actionable parsing errors.
 
 ## License
 
