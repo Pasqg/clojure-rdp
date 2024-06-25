@@ -40,7 +40,7 @@ right-recursive syntax tree into a left-recursive one (where needed, for
 example standard math expressions), or to avoid ambiguous grammars is left
 upon the user.
 
-### Examples
+### Example of rule definition
 
 1. The rule below will match either the token "a" **or** "b".
 
@@ -80,11 +80,13 @@ upon the user.
 "rule2"  '(["a"] ["a" "rule2"])
 ```
 
-6. The definitions below defines an expression grammar of the kind
-   "1 + (3.8 * 7 / (2.1 - 8))". In this grammar, right-recursion might
-   create an additional burden for operators with "left"-precedence (i.e.
-   subtraction and division). This can be overcome either by transforming
-   the parsed tree, or for example by enforcing using of brackets. 
+### Examples of grammars
+
+The definitions below define an expression grammar of the kind
+"1 + (3.8 * 7 / (2.1 - 8))". In this grammar, right-recursion might create
+an additional burden for operators with "left"-precedence (i.e. subtraction
+and division). This can be overcome either by transforming the parsed tree,
+or for example by enforcing using of brackets.
 
 ```
 "expression"   '(["number" "operator" "expression"]
@@ -97,8 +99,7 @@ upon the user.
 ```
 
 For the example expression "1 + (3.8 * 7 / (2.1 - 8))", this produces a (
-collapsed)
-parse tree:
+collapsed) parse tree:
 
 ```
 +- expression
@@ -124,6 +125,61 @@ parse tree:
 
 Upon mismatch, the parser will backtrack and try another rule on the same
 set of tokens until either a match is found or all rules have been tried.
+
+In the next example, the grammar describes a subset of Lisp. Everything is
+parsed as a bunch of **forms**. Each **form** is a **list** that contains**
+elements**, where each **element** is an **atom** (strings, numbers,
+symbols) or another **list**.
+
+```
+   "forms"      '(["form" "forms"] ["form"])
+   "form"       '(["\\(" "elements" "\\)"] ["empty-form"])
+   "elements"   '(["element" "elements"] ["element"])
+   "element"    '(["form"] ["atom"])
+
+   "empty-form" '(["\\(" "\\)"])
+   "collection" '()
+
+   "atom"       '(["string"] ["[a-zA-Z\\-][\\-a-zA-Z0-9]+"] ["number"])
+   "string"     '(["\"[^\".]*\""])
+   "number"     '(["\\d*\\.\\d*"] ["\\d*"])
+```
+
+As an example, see the program below:
+
+```
+(print "The result is 1+2+3" (sum 1 2 3))
+(print "Done!")
+```
+
+This produces the following parse tree:
+
+```
++- forms
+  +- form
+    +- \(: ["("]
+    +- elements
+      +- atom: ["print"]
+      +- elements
+        +- string: ["\"The result is 1+2+3\""]
+        +- form
+          +- \(: ["("]
+          +- elements
+            +- atom: ["sum"]
+            +- elements
+              +- number: ["1"]
+              +- elements
+                +- number: ["2"]
+                +- number: ["3"]
+          +- \): [")"]
+    +- \): [")"]
+  +- form
+    +- \(: ["("]
+    +- elements
+      +- atom: ["print"]
+      +- string: ["\"Done!\""]
+    +- \): [")"]
+```
 
 ## Error handling
 

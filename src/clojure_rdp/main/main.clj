@@ -91,5 +91,20 @@
    "integer-literal"               '(["\\d*"])
    "symbol"                        '(["[a-zA-z]+"])})
 
+(def rules-lisp
+  {
+   "forms"      '(["form" "forms"] ["form"])
+   "form"       '(["\\(" "elements" "\\)"] ["empty-form"])
+   "elements"   '(["element" "elements"] ["element"])
+   "element"    '(["form"] ["atom"])
+
+   "empty-form" '(["\\(" "\\)"])
+   "collection" '()
+
+   "atom"       '(["string"] ["[a-zA-Z\\-][\\-a-zA-Z0-9]+"] ["number"])
+   "string"     '(["\"[^\".]*\""])
+   "number"     '(["\\d*\\.\\d*"] ["\\d*"])
+   })
+
 (defn -main []
-  (print (to-json (parse "hello-word.txt" "program" rules-map))))
+  (print (to-json (parse "lisp.txt" "forms" rules-lisp #"([\(\)\{\}\[\]\+\*/=;,><\?\!\"])"))))

@@ -46,17 +46,20 @@
     )
   )
 
-(defn parse [file rule rules-map]
-  (as-> file x
-        (tokenize x)
-        (match-rule x rule rules-map)
-        (if (nil? x) (throw (Exception. "Could not parse")) x)
-        (let [remaining (:remaining (:parse-result x))]
-          (if (not-empty remaining)
-            (throw (Exception.
-                     (str "Error parsing after '"
-                          (first remaining) " " (second remaining) "'")))
-            x
-            ))
-        ))
+(defn parse
+  ([file rule rules-map] (parse file rule rules-map #"([\(\)\{\}\[\]\+\-\*/=;,><\?\!\"])"))
+  ([file rule rules-map standlone-tokens] (parse file rule rules-map standlone-tokens #"[ \t\n\r]+"))
+  ([file rule rules-map standlone-tokens whitespace-regex]
+   (as-> file x
+         (tokenize x standlone-tokens whitespace-regex)
+         (match-rule x rule rules-map)
+         (if (nil? x) (throw (Exception. "Could not parse")) x)
+         (let [remaining (:remaining (:parse-result x))]
+           (if (not-empty remaining)
+             (throw (Exception.
+                      (str "Error parsing after '"
+                           (first remaining) " " (second remaining) "'")))
+             x
+             ))
+         )))
 
