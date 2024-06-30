@@ -48,10 +48,10 @@
 
 (defn parse
   ([file rule rules-map] (parse file rule rules-map #"([\(\)\{\}\[\]\+\-\*/=;,><\?\!\"])"))
-  ([file rule rules-map standlone-tokens] (parse file rule rules-map standlone-tokens #"[ \t\n\r]+"))
-  ([file rule rules-map standlone-tokens whitespace-regex]
+  ([file rule rules-map standalone-tokens] (parse file rule rules-map standalone-tokens #"[ \t\n\r]+"))
+  ([file rule rules-map standalone-tokens whitespace-regex]
    (as-> file x
-         (tokenize x standlone-tokens whitespace-regex)
+         (tokenize x standalone-tokens whitespace-regex)
          (match-rule x rule rules-map)
          (if (nil? x) (throw (Exception. "Could not parse")) x)
          (let [remaining (:remaining (:parse-result x))]

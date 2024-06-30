@@ -1,6 +1,11 @@
 # clojure-rdp
 
-A Clojure library to parse generic (right-recursive) grammars.
+A Clojure project to parse generic (right-recursive) grammars.
+
+The main reason behind this project is to experiment with and quickly
+prototype grammars with little setup. It is not optimised, thus it is too
+slow for production. The resulting parse tree can be used directly in
+clojure or converted to json for use somewhere else.
 
 ## Usage
 
@@ -23,6 +28,22 @@ This outputs a parse tree that can be printed in different ways :
 ;prints a collapsed and compacted json
 (print (to-json (parse "hello-word.txt" "program" rules-map)))
 ```
+
+### Lexer
+
+The 'parse' function also runs the lexer, which will split the input into
+tokens using whitespaces (by default space, tab, new line). Then, if the
+lexer encounters a special standalone token in a word, it will be split as
+a separate token. By default, the following characters are standalone
+tokens:
+
+```
+[ ] ( ) { } + - * / = ; , > < ? ! "
+```
+
+This means that the string "(3 +2)" would first be split into "(3" and "
++2)" using whitespaces and then further decomposed in "(" "3" "+" "2" ")"
+using the standalone tokens regex.
 
 ## Rules definition
 
@@ -82,6 +103,10 @@ upon the user.
 
 ### Examples of grammars
 
+In this section, examples of complete grammars are provided.
+
+### 1. Expression grammar
+
 The definitions below define an expression grammar of the kind
 "1 + (3.8 * 7 / (2.1 - 8))". In this grammar, right-recursion might create
 an additional burden for operators with "left"-precedence (i.e. subtraction
@@ -93,8 +118,8 @@ or for example by enforcing using of brackets.
                       ["\\(" "expression" "\\)"]
                       ["number"])
 "number"            '(["double-literal"] ["integer-literal"])
-"double-literal"    '(["\\d*\\.\\d*"])
-"integer-literal"   '(["\\d*"])
+"double-literal"    '(["\\d*\\.\\d+"])
+"integer-literal"   '(["\\d+"])
 "operator"          '(["\\+"] ["-"] ["\\*"] ["/"])
 ```
 
@@ -126,10 +151,12 @@ collapsed) parse tree:
 Upon mismatch, the parser will backtrack and try another rule on the same
 set of tokens until either a match is found or all rules have been tried.
 
-In the next example, the grammar describes a subset of Lisp. Everything is
-parsed as a bunch of **forms**. Each **form** is a **list** that contains**
-elements**, where each **element** is an **atom** (strings, numbers,
-symbols) or another **list**.
+### 2. Lisp-like grammar
+
+In the next example, the rules definitions express a simple lisp-like
+grammar where everything is parsed as a bunch of **forms**. Each **form**
+is a **list** that contains **elements**, where each **element** is either
+an **atom** (strings, numbers, symbols) or a **list**.
 
 ```
    "forms"      '(["form" "forms"] ["form"])
@@ -140,15 +167,15 @@ symbols) or another **list**.
    "empty-form" '(["\\(" "\\)"])
    "collection" '()
 
-   "atom"       '(["string"] ["[a-zA-Z\\-][\\-a-zA-Z0-9]+"] ["number"])
+   "atom"       '(["string"] ["[a-zA-Z\\-][\\-a-zA-Z0-9]*"] ["number"])
    "string"     '(["\"[^\".]*\""])
-   "number"     '(["\\d*\\.\\d*"] ["\\d*"])
+   "number"     '(["\\d*\\.\\d+"] ["\\d+"])
 ```
 
 As an example, see the program below:
 
 ```
-(print "The result is 1+2+3" (sum 1 2 3))
+(print "The result of 1+2+3 is " (sum 1 2 3))
 (print "Done!")
 ```
 
@@ -161,7 +188,7 @@ This produces the following parse tree:
     +- elements
       +- atom: ["print"]
       +- elements
-        +- string: ["\"The result is 1+2+3\""]
+        +- string: ["\"The result is 1+2+3 is \""]
         +- form
           +- \(: ["("]
           +- elements
@@ -179,6 +206,144 @@ This produces the following parse tree:
       +- atom: ["print"]
       +- string: ["\"Done!\""]
     +- \): [")"]
+```
+
+### 3. Linear programming grammar
+
+As last example, let's create the definition for a grammar for linear
+programming (LP) problems.
+
+A LP problem statement requires:
+
+- A function (called 'objective') to optimise
+  (either minimise or maximise)
+- A set of constraints that define the admissibility region of the optimal
+  solution.
+
+We could write the problem as:
+
+```
+objective:
+    max 3x - y + .8
+
+where:
+    y <= 1
+    x > 2
+    x + y < 4
+```
+
+The parse this statement, we can use the following abstract rule, composed
+of 2 main rules:
+
+```
+"problem"  '(["objective-definition" "constraints-definition"])
+```
+
+#### 1. Objective definition
+
+The objective definition is composed by three parts:
+
+- "objective:" token (or "objective" + ":" tokens, depending on the lexer
+  configuration)
+- "min" or "max" token, to specify whether we want to maximise or minimise
+  the objective
+- an expression that defines a linear function. This will contain either
+  number or variables, and should only accept the operator "+" and "-"
+
+One way to describe it as a rule:
+
+```
+"objective-definition"  '(["objective" ":" "min-or-max" "expression"])
+"min-or-max"            '(["min"] ["max"])
+```  
+
+#### 2. Constraints definition
+
+The constraints definition is composed of:
+
+- "where" ":" tokens (or "where:", again depending on the lexer)
+- A set of constraints, each defined as an expression, followed by a
+  comparison operator (<, <=, >, >=, =) and then followed by another
+  expression.
+
+This boils down to:
+
+```
+"constraints-definition" '(["where" ":" "constraints"])
+"constraints"           '(["constraint" "constraints"] ["constraint"])
+"constraint"            '(["expression" "comp-op" "expression"])
+"comp-op"               '(["<" "="] [">" "="] ["<"] [">"] ["="])
+```
+
+Note: we could also restrict constraints to the form "expression < number".
+This will result in less freedom, but potentially speed up parsing.
+
+#### Final rule set
+
+In addition to the definitions in previous sections, we also need rules to
+parse the expressions. This is similar to the example 1 in this document.
+
+Expressions are composed of items and operators (only + or - because of
+linearity requirements). Expression items are either number literals (
+integers or real numbers) or variables (a string with at least 1 character,
+can contain digits but must start with a letter first).
+
+Given that the variables in each expression can have a coefficient
+assigned (i.e. 3x), we will also introduce a third item type called
+"scaled-variable" which is a single token starting with a number followed
+by a variable name.
+
+This can be expressed by the following rules:
+
+```
+"expression"            '(["expression-item" "op" "expression"] ["expression-item"])
+"expression-item"       '(["scaled-variable"] ["variable"] ["number"])
+"scaled-variable"       '(["((\\d*\\.\\d+)|(\\d+))[a-zA-Z][a-zA-Z0-9]*"])
+"op"                    '(["\\+"] ["\\-"])
+
+"number"                '(["\\d*\\.\\d+"] ["\\d+"])
+"variable"              '(["[a-zA-Z][a-zA-Z0-9]*"])
+```
+
+With all the definitions above put together, we can parse the statement
+provided as example at the beginning of this section. The resulting tree
+is:
+
+```
++- problem
+  +- objective-definition
+    +- objective: ["objective"]
+    +- :: [":"]
+    +- max: ["max"]
+    +- expression
+      +- scaled-variable: ["3x"]
+      +- \-: ["-"]
+      +- expression
+        +- variable: ["y"]
+        +- \+: ["+"]
+        +- number: [".8"]
+  +- constraints-definition
+    +- where: ["where"]
+    +- :: [":"]
+    +- constraints
+      +- constraint
+        +- variable: ["y"]
+        +- comp-op
+          +- <: ["<"]
+          +- =: ["="]
+        +- \d+: ["1"]
+      +- constraints
+        +- constraint
+          +- variable: ["x"]
+          +- >: [">"]
+          +- \d+: ["2"]
+        +- constraint
+          +- expression
+            +- variable: ["x"]
+            +- \+: ["+"]
+            +- variable: ["y"]
+          +- <: ["<"]
+          +- \d+: ["4"]
 ```
 
 ## Error handling

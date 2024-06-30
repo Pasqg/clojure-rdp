@@ -1,2 +1,0 @@
-(print "The result is 1+2+3" (sum 1 2 3))
-(print "Done!")

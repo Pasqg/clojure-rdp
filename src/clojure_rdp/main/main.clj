@@ -107,4 +107,4 @@
    })
 
 (defn -main []
-  (print (to-json (parse "lisp.txt" "forms" rules-lisp #"([\(\)\{\}\[\]\+\*/=;,><\?\!\"])"))))
+  (print (to-json (parse "examples/lisp.txt" "forms" rules-lisp #"([\(\)\{\}\[\]\+\*/=;,><\?\!\"])"))))
